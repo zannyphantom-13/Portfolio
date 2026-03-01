@@ -658,12 +658,39 @@ footer {
         z-index: 2;
     }
 
+    .container {
+        padding: 0 1rem;
+    }
+
+    .about,
+    .projects,
+    .contact,
+    .testimonials {
+        padding: 4rem 0;
+    }
+
     .projects-grid,
     .testimonials-grid {
         grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+
+    .testimonial-card,
+    .project-card {
+        padding: 1.5rem;
     }
 
     .section-title {
         font-size: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    /* Make sure user profile fits on small screens */
+    #user-info {
+        flex-direction: column !important;
+    }
+
+    .social-links {
+        gap: 1.2rem;
     }
 }

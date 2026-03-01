@@ -194,7 +194,7 @@
     <script type="module">
         // Import the functions you need from the SDKs you need
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getAuth, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, query, where, deleteDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         // IMPORTANT: Replace the following with your app's Firebase project configuration
@@ -237,6 +237,17 @@
             const submissionMessage = document.getElementById('submission-message');
             const testimonialsGrid = document.getElementById('testimonials-grid');
 
+            // Handle Redirect Result
+            getRedirectResult(auth).then((result) => {
+                if (result) {
+                    // This is the result from the redirect login
+                    console.log("Successfully signed in via redirect");
+                }
+            }).catch((error) => {
+                console.error("Error with redirect sign-in", error);
+                authMessage.textContent = "Error signing in. See console.";
+            });
+
             // Authentication State Observer
             onAuthStateChanged(auth, (user) => {
                 currentUser = user;
@@ -259,10 +270,7 @@
 
             // Sign In
             signInBtn.addEventListener('click', () => {
-                signInWithPopup(auth, googleProvider).catch(error => {
-                    console.error("Sign in error", error);
-                    authMessage.textContent = "Error signing in. See console.";
-                });
+                signInWithRedirect(auth, googleProvider);
             });
 
             // Sign Out

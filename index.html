@@ -367,6 +367,7 @@
             // --- Auth UI ---
             const updateAuthUI = (user) => {
                 currentUser = user;
+                console.log("[Admin Debug] Signed in as:", user?.email, "| Admin email:", ADMIN_EMAIL, "| Match:", user?.email === ADMIN_EMAIL);
                 isAdmin = !!(user && user.email === ADMIN_EMAIL);
 
                 if (user) {

@@ -327,17 +327,23 @@
 
                 pendingData = data || [];
                 const newIds = new Set(pendingData.map(t => t.id));
+                const hadPreviousState = lastPendingIds.size > 0;
 
                 // Notification bell shake and sound for genuinely new items
-                if (lastPendingIds.size > 0) {
+                if (hadPreviousState) {
                     const hasNew = [...newIds].some(id => !lastPendingIds.has(id));
                     if (hasNew) {
+                        console.log('[Notification] New testimonial(s) detected!');
                         playNotificationSound();
                         const bellIcon = adminBell.querySelector('i');
                         bellIcon.classList.add('bell-ring');
                         setTimeout(() => bellIcon.classList.remove('bell-ring'), 600);
                     }
+                } else if (pendingData.length > 0) {
+                    // First load with pending items - show they exist
+                    console.log('[Notification] Initial load with', pendingData.length, 'pending testimonial(s)');
                 }
+                
                 lastPendingIds = newIds;
 
                 // Update badge count
@@ -417,12 +423,37 @@
 
             // --- Admin realtime ---
             const setupAdminChannel = () => {
-                if (adminChannel) return;
-                adminChannel = supabaseClient.channel('admin:testimonials')
-                    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'testimonials' }, () => loadPending())
-                    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'testimonials' }, () => { loadPending(); loadTestimonials(); })
-                    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'testimonials' }, () => { loadPending(); loadTestimonials(); })
-                    .subscribe();
+                if (adminChannel) {
+                    console.log('[Admin] Channel already exists');
+                    return;
+                }
+                console.log('[Admin] Setting up admin channel...');
+                adminChannel = supabaseClient.channel('admin:testimonials:' + Math.random(), { config: { broadcast: { self: true } } })
+                    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'testimonials' }, (payload) => {
+                        console.log('[Admin] INSERT event:', payload);
+                        loadPending();
+                    })
+                    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'testimonials' }, (payload) => {
+                        console.log('[Admin] UPDATE event:', payload);
+                        loadPending();
+                        loadTestimonials();
+                    })
+                    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'testimonials' }, (payload) => {
+                        console.log('[Admin] DELETE event:', payload);
+                        loadPending();
+                        loadTestimonials();
+                    })
+                    .subscribe((status) => {
+                        console.log('[Admin Channel] Status:', status);
+                        if (status === 'SUBSCRIBED') {
+                            console.log('[Admin] Channel subscribed successfully');
+                            loadPending();
+                        } else if (status === 'CHANNEL_ERROR') {
+                            console.error('[Admin] Channel error - will retry');
+                            adminChannel = null;
+                            setTimeout(setupAdminChannel, 2000);
+                        }
+                    });
             };
 
             // --- Auth UI ---
@@ -496,16 +527,43 @@
                     const { data, error } = await supabaseClient.from('testimonials').select('*')
                         .eq('approved', true).order('created_at', { ascending: false });
                     if (error) {
+                        console.error('[Testimonials] Fetch error:', error);
                         testimonialsGrid.innerHTML = '<p style="color:#ff4444;grid-column:1/-1;text-align:center;">Error loading testimonials.</p>';
                         return;
                     }
+                    console.log('[Testimonials] Loaded', data?.length || 0, 'approved testimonials');
                     renderTestimonials(data || []);
                 };
                 await fetchApproved();
+                
+                // Setup public channel for realtime updates on approvals
                 if (!publicChannel) {
-                    publicChannel = supabaseClient.channel('public:testimonials')
-                        .on('postgres_changes', { event: '*', schema: 'public', table: 'testimonials' }, () => fetchApproved())
-                        .subscribe();
+                    console.log('[Public] Setting up public channel...');
+                    publicChannel = supabaseClient.channel('public:testimonials:' + Math.random(), { config: { broadcast: { self: true } } })
+                        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'testimonials' }, (payload) => {
+                            console.log('[Public] INSERT event - refetching approved:', payload);
+                            fetchApproved();
+                        })
+                        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'testimonials' }, (payload) => {
+                            console.log('[Public] UPDATE event - refetching approved:', payload);
+                            fetchApproved();
+                        })
+                        .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'testimonials' }, (payload) => {
+                            console.log('[Public] DELETE event - refetching approved:', payload);
+                            fetchApproved();
+                        })
+                        .subscribe((status) => {
+                            if (status === 'SUBSCRIBED') {
+                                console.log('[Public Channel] Subscribed successfully');
+                            } else if (status === 'CHANNEL_ERROR') {
+                                console.error('[Public] Channel error - will retry');
+                                publicChannel = null;
+                                setTimeout(loadTestimonials, 2000);
+                            }
+                        });
+                    
+                    // Fallback polling to ensure updates appear (poll every 10 seconds)
+                    setInterval(fetchApproved, 10000);
                 }
             }
 

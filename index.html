@@ -63,7 +63,7 @@
             <!-- Admin Notification Bell -->
             <div id="admin-bell" style="display:none;position:relative;cursor:pointer;margin-left:1rem;" title="Pending Testimonials">
                 <i class="fas fa-bell" style="font-size:1.3rem;color:var(--primary-color);"></i>
-                <span id="notif-count" style="display:none;position:absolute;top:-8px;right:-8px;background:#ff4444;color:#fff;font-size:0.65rem;font-weight:700;border-radius:50%;width:18px;height:18px;line-height:18px;text-align:center;">0</span>
+                <span id="notif-count" style="display:none;position:absolute;top:-10px;right:-10px;background:#ff4444;color:#fff;font-size:0.65rem;font-weight:700;border-radius:50%;width:20px;height:20px;line-height:1;display:flex;align-items:center;justify-content:center;">0</span>
             </div>
             <!-- Admin Notification Panel -->
             <div id="admin-notif-panel" style="display:none;position:fixed;top:70px;right:20px;background:#1a1a2e;border:1px solid var(--primary-color);border-radius:12px;padding:1rem;min-width:300px;max-width:400px;max-height:400px;overflow-y:auto;z-index:9999;box-shadow:0 8px 32px rgba(0,0,0,0.5);">
@@ -328,7 +328,7 @@
                 pendingData = data || [];
                 const newIds = new Set(pendingData.map(t => t.id));
 
-                // Notification sound + bell shake for genuinely new items
+                // Notification bell shake and sound for genuinely new items
                 if (lastPendingIds.size > 0) {
                     const hasNew = [...newIds].some(id => !lastPendingIds.has(id));
                     if (hasNew) {
@@ -542,6 +542,7 @@
         });
     </script>
     <script src="script.js"></script>
+
 </body>
 
 </html>

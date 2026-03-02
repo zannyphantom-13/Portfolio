@@ -297,10 +297,15 @@
             // --- Admin: Load pending testimonials ---
             const loadPending = async () => {
                 if (!isAdmin) return;
+                console.log('[loadPending] Fetching unapproved testimonials...');
                 const { data, error } = await supabaseClient
                     .from('testimonials').select('*').eq('approved', false)
                     .order('created_at', { ascending: false });
-                if (error) { console.error('Admin fetch error:', error); return; }
+                console.log('[loadPending] data:', data, 'error:', error);
+                if (error) {
+                    pendingList.innerHTML = `<p style="color:#ff4444;font-size:0.8rem;">DB Error: ${error.message}<br><br>Fix: Run the SQL policy update in Supabase SQL Editor so the admin can read unapproved rows.</p>`;
+                    return;
+                }
 
                 const pending = data || [];
                 const newIds = new Set(pending.map(t => t.id));

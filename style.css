@@ -140,7 +140,7 @@ header {
     background: var(--nav-bg);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    z-index: 1000;
+    z-index: 1200;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -247,7 +247,6 @@ header {
     z-index: 1050;
     opacity: 0;
     transition: opacity 0.35s ease;
-    backdrop-filter: blur(4px);
 }
 
 .nav-overlay.active {

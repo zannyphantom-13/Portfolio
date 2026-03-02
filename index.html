@@ -199,15 +199,15 @@
         const providedKey = 'IkKNlIghivcyT5a-i6GH5QwMCtdXbDYfxSfKP4aQjdc.';
         const supabaseAnonKey = providedKey.endsWith('.') ? providedKey.slice(0, -1) : providedKey;
 
-        let supabase;
+        let supabaseClient;
         try {
-            supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+            supabaseClient = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
         } catch (error) {
             console.error("Supabase not configured right. Error:", error);
         }
 
         document.addEventListener('DOMContentLoaded', async () => {
-            if (!supabase) return;
+            if (!supabaseClient) return;
 
             let currentUser = null;
 
@@ -242,15 +242,15 @@
                 loadTestimonials();
             };
 
-            supabase.auth.onAuthStateChange((_event, session) => {
+            supabaseClient.auth.onAuthStateChange((_event, session) => {
                 updateAuthUI(session?.user || null);
             });
 
-            const { data: { session } } = await supabase.auth.getSession();
+            const { data: { session } } = await supabaseClient.auth.getSession();
             updateAuthUI(session?.user || null);
 
             signInBtn.addEventListener('click', async () => {
-                const { error } = await supabase.auth.signInWithOAuth({
+                const { error } = await supabaseClient.auth.signInWithOAuth({
                     provider: 'google',
                     options: { redirectTo: window.location.origin }
                 });
@@ -261,7 +261,7 @@
             });
 
             signOutBtn.addEventListener('click', async () => {
-                await supabase.auth.signOut();
+                await supabaseClient.auth.signOut();
             });
 
             testimonialForm.addEventListener('submit', async (e) => {
@@ -273,7 +273,7 @@
                 submitBtn.disabled = true;
                 submitBtn.textContent = 'Submitting...';
                 try {
-                    const { error } = await supabase.from('testimonials').insert([{
+                    const { error } = await supabaseClient.from('testimonials').insert([{
                         text: text,
                         author_name: currentUser.user_metadata?.full_name || currentUser.email,
                         author_photo: currentUser.user_metadata?.avatar_url || '',
@@ -308,7 +308,7 @@
                 };
                 await fetchApproved();
                 if (!channel) {
-                    channel = supabase.channel('public:testimonials')
+                    channel = supabaseClient.channel('public:testimonials')
                         .on('postgres_changes', { event: '*', schema: 'public', table: 'testimonials' }, () => fetchApproved())
                         .subscribe();
                 }
@@ -340,7 +340,7 @@
                         const id = e.target.getAttribute('data-id');
                         if (confirm("Delete this testimonial?")) {
                             try {
-                                const { error } = await supabase.from('testimonials').delete().eq('id', id);
+                                const { error } = await supabaseClient.from('testimonials').delete().eq('id', id);
                                 if (error) throw error;
                             } catch (error) {
                                 console.error("Delete error:", error);

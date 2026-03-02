@@ -518,23 +518,47 @@
                 list.forEach(data => {
                     const card = document.createElement('div');
                     card.className = 'testimonial-card';
-                    let delBtn = '';
+                    let actionBtn = '';
                     if (currentUser && currentUser.id === data.author_uid && !isAdmin) {
-                        delBtn = `<button class="btn delete-btn" data-id="${data.id}" style="background:transparent;border:1px solid #ff4444;color:#ff4444;padding:0.2rem 0.5rem;font-size:0.8rem;margin-top:1rem;cursor:pointer;border-radius:4px;">Delete My Testimonial</button>`;
+                        actionBtn = `<div style="display:flex;gap:0.5rem;margin-top:1rem;">
+                            <button class="btn edit-btn" data-id="${data.id}" data-text="${data.text.replace(/"/g, '&quot;')}" style="background:transparent;border:1px solid #3b82f6;color:#3b82f6;padding:0.2rem 0.5rem;font-size:0.8rem;cursor:pointer;border-radius:4px;flex:1;">Edit</button>
+                            <button class="btn delete-btn" data-id="${data.id}" style="background:transparent;border:1px solid #ff4444;color:#ff4444;padding:0.2rem 0.5rem;font-size:0.8rem;cursor:pointer;border-radius:4px;flex:1;">Delete</button>
+                        </div>`;
                     }
                     card.innerHTML = `<p class="testimonial-text">"${data.text}"</p>
                         <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-top:1rem;">
                             <img src="${data.author_photo||'media/profile.png'}" alt="${data.author_name}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;" onerror="this.src='media/profile.png'">
                             <h4 class="client-name" style="margin:0;">- ${data.author_name}</h4>
-                        </div>${delBtn}`;
+                        </div>${actionBtn}`;
                     testimonialsGrid.appendChild(card);
                 });
+
+                // Edit button handler
+                document.querySelectorAll('.edit-btn').forEach(btn => {
+                    btn.addEventListener('click', async e => {
+                        const id = e.target.getAttribute('data-id');
+                        const currentText = e.target.getAttribute('data-text');
+                        const newText = prompt('Edit your testimonial:', currentText);
+                        if (newText && newText.trim() && newText !== currentText) {
+                            const { error } = await supabaseClient.from('testimonials').update({ text: newText.trim() }).eq('id', id);
+                            if (error) {
+                                alert('Failed to update testimonial.');
+                                console.error(error);
+                            }
+                        }
+                    });
+                });
+
+                // Delete button handler
                 document.querySelectorAll('.delete-btn').forEach(btn => {
                     btn.addEventListener('click', async e => {
                         const id = e.target.getAttribute('data-id');
                         if (confirm('Delete this testimonial?')) {
                             const { error } = await supabaseClient.from('testimonials').delete().eq('id', id);
-                            if (error) alert('Failed to delete.');
+                            if (error) {
+                                alert('Failed to delete.');
+                                console.error(error);
+                            }
                         }
                     });
                 });

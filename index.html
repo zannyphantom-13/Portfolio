@@ -238,143 +238,193 @@
         let supabaseClient;
         try {
             supabaseClient = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
-        } catch (e) {
-            console.error('Supabase init error:', e);
-        }
+        } catch (e) { console.error('Supabase init error:', e); }
 
-        // --- Notification Sound (Web Audio API) ---
         function playNotificationSound() {
             try {
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                const o = ctx.createOscillator();
-                const g = ctx.createGain();
+                const o = ctx.createOscillator(), g = ctx.createGain();
                 o.connect(g); g.connect(ctx.destination);
                 o.type = 'sine';
                 o.frequency.setValueAtTime(880, ctx.currentTime);
                 o.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.3);
                 g.gain.setValueAtTime(0.4, ctx.currentTime);
                 g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
-                o.start(ctx.currentTime);
-                o.stop(ctx.currentTime + 0.5);
+                o.start(ctx.currentTime); o.stop(ctx.currentTime + 0.5);
             } catch(e) {}
         }
 
         document.addEventListener('DOMContentLoaded', async () => {
             if (!supabaseClient) return;
 
-            let currentUser = null;
-            let isAdmin = false;
-            let adminChannel = null;
+            let currentUser = null, isAdmin = false;
+            let adminChannel = null, publicChannel = null;
             let lastPendingIds = new Set();
+            let pendingData = [];
 
-            const signInBtn = document.getElementById('google-signin-btn');
-            const signOutBtn = document.getElementById('sign-out-btn');
-            const userInfo = document.getElementById('user-info');
-            const authMessage = document.getElementById('auth-message');
-            const userName = document.getElementById('user-name');
-            const userPhoto = document.getElementById('user-photo');
-            const addTestimonialForm = document.getElementById('add-testimonial-form');
-            const testimonialForm = document.getElementById('testimonial-form');
-            const testimonialInput = document.getElementById('testimonial-text');
-            const submissionMessage = document.getElementById('submission-message');
-            const testimonialsGrid = document.getElementById('testimonials-grid');
-            const adminBell = document.getElementById('admin-bell');
-            const notifCount = document.getElementById('notif-count');
-            const adminPanel = document.getElementById('admin-notif-panel');
-            const pendingList = document.getElementById('pending-list');
+            const $ = id => document.getElementById(id);
+            const signInBtn = $('google-signin-btn'), signOutBtn = $('sign-out-btn');
+            const userInfo = $('user-info'), authMessage = $('auth-message');
+            const userName = $('user-name'), userPhoto = $('user-photo');
+            const addTestimonialForm = $('add-testimonial-form');
+            const testimonialForm = $('testimonial-form'), testimonialInput = $('testimonial-text');
+            const submissionMessage = $('submission-message'), testimonialsGrid = $('testimonials-grid');
+            const adminBell = $('admin-bell'), notifCount = $('notif-count');
+            const adminPanel = $('admin-notif-panel'), pendingList = $('pending-list');
 
-            // Toggle notification panel on bell click
+            // --- Bell toggle ---
             adminBell.addEventListener('click', () => {
                 adminPanel.style.display = adminPanel.style.display === 'none' ? 'block' : 'none';
             });
-            // Close panel on outside click
-            document.addEventListener('click', (e) => {
-                if (!adminBell.contains(e.target) && !adminPanel.contains(e.target)) {
+            document.addEventListener('click', e => {
+                if (!adminBell.contains(e.target) && !adminPanel.contains(e.target))
                     adminPanel.style.display = 'none';
-                }
             });
 
-            // --- Admin: Load pending testimonials ---
+            // --- Get selected IDs ---
+            function getSelectedIds() {
+                return [...document.querySelectorAll('.pending-check:checked')].map(cb => cb.dataset.id);
+            }
+
+            // --- Bulk action: approve/decline/delete ---
+            async function bulkAction(action, ids) {
+                if (!ids.length) { alert('Select at least one testimonial.'); return; }
+                if (action === 'delete' && !confirm(`Delete ${ids.length} testimonial(s)?`)) return;
+                for (const id of ids) {
+                    if (action === 'approve') {
+                        await supabaseClient.from('testimonials').update({ approved: true }).eq('id', id);
+                    } else if (action === 'decline') {
+                        await supabaseClient.from('testimonials').update({ approved: false, declined: true }).eq('id', id);
+                    } else if (action === 'delete') {
+                        await supabaseClient.from('testimonials').delete().eq('id', id);
+                    }
+                }
+                await loadPending(); await loadTestimonials();
+            }
+
+            // --- Load pending testimonials ---
             const loadPending = async () => {
                 if (!isAdmin) return;
-                console.log('[loadPending] Fetching unapproved testimonials...');
                 const { data, error } = await supabaseClient
                     .from('testimonials').select('*').eq('approved', false)
                     .order('created_at', { ascending: false });
-                console.log('[loadPending] data:', data, 'error:', error);
+
                 if (error) {
-                    pendingList.innerHTML = `<p style="color:#ff4444;font-size:0.8rem;">DB Error: ${error.message}<br><br>Fix: Run the SQL policy update in Supabase SQL Editor so the admin can read unapproved rows.</p>`;
+                    pendingList.innerHTML = `<p style="color:#ff4444;font-size:0.8rem;line-height:1.5;">
+                        <strong>DB Error:</strong> ${error.message}<br><br>
+                        Run this SQL in Supabase SQL Editor:<br>
+                        <code style="font-size:0.7rem;word-break:break-all;">
+                        drop policy if exists "Public read approved" on testimonials;<br>
+                        create policy "Public read approved" on testimonials for select using (approved = true OR auth.jwt() ->> 'email' = '${ADMIN_EMAIL}');
+                        </code></p>`;
                     return;
                 }
 
-                const pending = data || [];
-                const newIds = new Set(pending.map(t => t.id));
+                pendingData = data || [];
+                const newIds = new Set(pendingData.map(t => t.id));
 
-                // Check for genuinely new submissions
+                // Notification sound + bell shake for genuinely new items
                 if (lastPendingIds.size > 0) {
                     const hasNew = [...newIds].some(id => !lastPendingIds.has(id));
                     if (hasNew) {
                         playNotificationSound();
-                        const bell = adminBell.querySelector('i');
-                        bell.classList.add('bell-ring');
-                        setTimeout(() => bell.classList.remove('bell-ring'), 600);
+                        const bellIcon = adminBell.querySelector('i');
+                        bellIcon.classList.add('bell-ring');
+                        setTimeout(() => bellIcon.classList.remove('bell-ring'), 600);
                     }
                 }
                 lastPendingIds = newIds;
 
-                // Update badge
-                if (pending.length > 0) {
+                // Update badge count
+                if (pendingData.length > 0) {
                     notifCount.style.display = 'flex';
-                    notifCount.textContent = pending.length;
+                    notifCount.textContent = pendingData.length;
                 } else {
                     notifCount.style.display = 'none';
                 }
 
-                // Render pending list
-                if (pending.length === 0) {
+                // Render
+                if (pendingData.length === 0) {
                     pendingList.innerHTML = '<p style="color:var(--text-muted);font-size:0.85rem;">No pending testimonials.</p>';
                     return;
                 }
-                pendingList.innerHTML = '';
-                pending.forEach(t => {
+
+                pendingList.innerHTML = `
+                    <div style="display:flex;align-items:center;gap:6px;margin-bottom:0.75rem;flex-wrap:wrap;">
+                        <label style="display:flex;align-items:center;gap:4px;color:#aaa;font-size:0.8rem;cursor:pointer;">
+                            <input type="checkbox" id="select-all-chk" style="cursor:pointer;"> Select All
+                        </label>
+                        <button class="approve-btn bulk-btn" data-action="approve" style="background:#22c55e;"> Approve</button>
+                        <button class="approve-btn bulk-btn" data-action="decline" style="background:#f59e0b;"> Decline</button>
+                        <button class="approve-btn bulk-btn" data-action="delete" style="background:#ef4444;"> Delete</button>
+                        <button class="approve-btn" id="delete-all-btn" style="background:#7f1d1d;margin-left:auto;">Delete All</button>
+                    </div>
+                    <div id="pending-items-list"></div>`;
+
+                const itemsList = document.getElementById('pending-items-list');
+                pendingData.forEach(t => {
                     const item = document.createElement('div');
                     item.className = 'pending-item';
+                    item.dataset.id = t.id;
                     item.innerHTML = `
-                        <strong>${t.author_name || 'Anonymous'}</strong>
-                        <span>${t.text}</span>
-                        <br>
-                        <button class="approve-btn" data-id="${t.id}"> Approve</button>
-                    `;
-                    pendingList.appendChild(item);
+                        <div style="display:flex;align-items:flex-start;gap:8px;">
+                            <input type="checkbox" class="pending-check" data-id="${t.id}" style="margin-top:3px;cursor:pointer;">
+                            <div style="flex:1;">
+                                <strong>${t.author_name || 'Anonymous'}</strong>
+                                <span>${t.text}</span>
+                                <div style="display:flex;gap:6px;margin-top:0.5rem;flex-wrap:wrap;">
+                                    <button class="approve-btn item-approve" data-id="${t.id}" style="background:#22c55e;"> Approve</button>
+                                    <button class="approve-btn item-decline" data-id="${t.id}" style="background:#f59e0b;"> Decline</button>
+                                    <button class="approve-btn item-delete" data-id="${t.id}" style="background:#ef4444;"> Delete</button>
+                                </div>
+                            </div>
+                        </div>`;
+                    itemsList.appendChild(item);
                 });
-                // Approve buttons
-                pendingList.querySelectorAll('.approve-btn').forEach(btn => {
-                    btn.addEventListener('click', async (e) => {
-                        const id = e.target.getAttribute('data-id');
-                        btn.disabled = true; btn.textContent = 'Approving...';
-                        const { error } = await supabaseClient.from('testimonials')
-                            .update({ approved: true }).eq('id', id);
-                        if (error) { console.error('Approve error:', error); btn.textContent = 'Error'; }
-                        else { loadPending(); loadTestimonials(); }
-                    });
+
+                // Select All
+                document.getElementById('select-all-chk').addEventListener('change', e => {
+                    document.querySelectorAll('.pending-check').forEach(cb => cb.checked = e.target.checked);
+                });
+
+                // Bulk buttons
+                document.querySelectorAll('.bulk-btn').forEach(btn => {
+                    btn.addEventListener('click', () => bulkAction(btn.dataset.action, getSelectedIds()));
+                });
+
+                // Delete All
+                document.getElementById('delete-all-btn').addEventListener('click', async () => {
+                    if (!confirm(`Delete ALL ${pendingData.length} pending testimonials?`)) return;
+                    await bulkAction('delete', pendingData.map(t => t.id));
+                });
+
+                // Individual buttons
+                document.querySelectorAll('.item-approve').forEach(btn => {
+                    btn.addEventListener('click', () => bulkAction('approve', [btn.dataset.id]));
+                });
+                document.querySelectorAll('.item-decline').forEach(btn => {
+                    btn.addEventListener('click', () => bulkAction('decline', [btn.dataset.id]));
+                });
+                document.querySelectorAll('.item-delete').forEach(btn => {
+                    btn.addEventListener('click', () => bulkAction('delete', [btn.dataset.id]));
                 });
             };
 
-            // --- Setup admin realtime channel ---
+            // --- Admin realtime ---
             const setupAdminChannel = () => {
                 if (adminChannel) return;
                 adminChannel = supabaseClient.channel('admin:testimonials')
                     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'testimonials' }, () => loadPending())
-                    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'testimonials' }, () => loadPending())
+                    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'testimonials' }, () => { loadPending(); loadTestimonials(); })
+                    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'testimonials' }, () => { loadPending(); loadTestimonials(); })
                     .subscribe();
             };
 
             // --- Auth UI ---
             const updateAuthUI = (user) => {
                 currentUser = user;
-                console.log("[Admin Debug] Signed in as:", user?.email, "| Admin email:", ADMIN_EMAIL, "| Match:", user?.email === ADMIN_EMAIL);
+                console.log('[Admin Debug] Signed in as:', user?.email, '| Admin email:', ADMIN_EMAIL, '| Match:', user?.email === ADMIN_EMAIL);
                 isAdmin = !!(user && user.email === ADMIN_EMAIL);
-
                 if (user) {
                     signInBtn.style.display = 'none';
                     authMessage.style.display = 'none';
@@ -401,31 +451,24 @@
                 loadTestimonials();
             };
 
-            supabaseClient.auth.onAuthStateChange((_event, session) => {
-                updateAuthUI(session?.user || null);
-            });
+            supabaseClient.auth.onAuthStateChange((_event, session) => updateAuthUI(session?.user || null));
             const { data: { session } } = await supabaseClient.auth.getSession();
             updateAuthUI(session?.user || null);
 
-            // Sign In
             signInBtn.addEventListener('click', async () => {
                 const { error } = await supabaseClient.auth.signInWithOAuth({
-                    provider: 'google',
-                    options: { redirectTo: window.location.origin }
+                    provider: 'google', options: { redirectTo: window.location.origin }
                 });
                 if (error) { console.error('Sign in error', error); authMessage.textContent = 'Error signing in.'; }
             });
-
-            // Sign Out
             signOutBtn.addEventListener('click', async () => { await supabaseClient.auth.signOut(); });
 
-            // Submit Testimonial
             testimonialForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 if (!currentUser || isAdmin) return;
                 const text = testimonialInput.value.trim();
                 if (!text) return;
-                const submitBtn = document.getElementById('submit-testimonial-btn');
+                const submitBtn = $('submit-testimonial-btn');
                 submitBtn.disabled = true; submitBtn.textContent = 'Submitting...';
                 try {
                     const { error } = await supabaseClient.from('testimonials').insert([{
@@ -443,8 +486,6 @@
                 } finally { submitBtn.disabled = false; submitBtn.textContent = 'Submit Testimonial'; }
             });
 
-            // Load approved testimonials
-            let publicChannel;
             async function loadTestimonials() {
                 const fetchApproved = async () => {
                     const { data, error } = await supabaseClient.from('testimonials').select('*')
@@ -469,7 +510,7 @@
                     testimonialsGrid.innerHTML = '<p style="color:var(--text-muted);grid-column:1/-1;text-align:center;">No testimonials yet.</p>';
                     return;
                 }
-                list.forEach((data) => {
+                list.forEach(data => {
                     const card = document.createElement('div');
                     card.className = 'testimonial-card';
                     let delBtn = '';
@@ -484,7 +525,7 @@
                     testimonialsGrid.appendChild(card);
                 });
                 document.querySelectorAll('.delete-btn').forEach(btn => {
-                    btn.addEventListener('click', async (e) => {
+                    btn.addEventListener('click', async e => {
                         const id = e.target.getAttribute('data-id');
                         if (confirm('Delete this testimonial?')) {
                             const { error } = await supabaseClient.from('testimonials').delete().eq('id', id);

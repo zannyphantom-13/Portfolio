@@ -15,9 +15,12 @@
         integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg=="
         crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
-        #admin-bell:hover > i { color: #fff; }
+        #admin-bell:hover>i {
+            color: #fff;
+        }
+
         #admin-notif-panel .pending-item {
-            background: rgba(255,255,255,0.05);
+            background: rgba(255, 255, 255, 0.05);
             border-radius: 8px;
             padding: 0.75rem;
             margin-bottom: 0.5rem;
@@ -25,7 +28,13 @@
             color: #ddd;
             border-left: 3px solid var(--primary-color);
         }
-        #admin-notif-panel .pending-item strong { color: #fff; display: block; margin-bottom: 0.3rem; }
+
+        #admin-notif-panel .pending-item strong {
+            color: #fff;
+            display: block;
+            margin-bottom: 0.3rem;
+        }
+
         #admin-notif-panel .approve-btn {
             background: var(--primary-color);
             color: #fff;
@@ -36,11 +45,38 @@
             cursor: pointer;
             margin-top: 0.4rem;
         }
-        #admin-notif-panel .approve-btn:hover { opacity: 0.85; }
-        @keyframes bell-shake {
-            0%,100%{transform:rotate(0)} 20%{transform:rotate(-20deg)} 40%{transform:rotate(20deg)} 60%{transform:rotate(-10deg)} 80%{transform:rotate(10deg)}
+
+        #admin-notif-panel .approve-btn:hover {
+            opacity: 0.85;
         }
-        .bell-ring { animation: bell-shake 0.5s ease; }
+
+        @keyframes bell-shake {
+
+            0%,
+            100% {
+                transform: rotate(0)
+            }
+
+            20% {
+                transform: rotate(-20deg)
+            }
+
+            40% {
+                transform: rotate(20deg)
+            }
+
+            60% {
+                transform: rotate(-10deg)
+            }
+
+            80% {
+                transform: rotate(10deg)
+            }
+        }
+
+        .bell-ring {
+            animation: bell-shake 0.5s ease;
+        }
     </style>
 </head>
 
@@ -61,14 +97,21 @@
                 <span></span>
             </div>
             <!-- Admin Notification Bell -->
-            <div id="admin-bell" style="display:none;position:relative;cursor:pointer;margin-left:1rem;" title="Pending Testimonials">
+            <div id="admin-bell" style="display:none;position:relative;cursor:pointer;margin-left:1rem;"
+                title="Pending Testimonials">
                 <i class="fas fa-bell" style="font-size:1.3rem;color:var(--primary-color);"></i>
-                <span id="notif-count" style="display:none;position:absolute;top:-10px;right:-10px;background:#ff4444;color:#fff;font-size:0.65rem;font-weight:700;border-radius:50%;width:20px;height:20px;line-height:1;display:flex;align-items:center;justify-content:center;">0</span>
+                <span id="notif-count"
+                    style="display:none;position:absolute;top:-10px;right:-10px;background:#ff4444;color:#fff;font-size:0.65rem;font-weight:700;border-radius:50%;width:20px;height:20px;line-height:1;display:flex;align-items:center;justify-content:center;">0</span>
             </div>
             <!-- Admin Notification Panel -->
-            <div id="admin-notif-panel" style="display:none;position:fixed;top:70px;right:20px;background:#1a1a2e;border:1px solid var(--primary-color);border-radius:12px;padding:1rem;min-width:300px;max-width:400px;max-height:400px;overflow-y:auto;z-index:9999;box-shadow:0 8px 32px rgba(0,0,0,0.5);">
-                <h4 style="color:var(--primary-color);margin:0 0 0.75rem 0;font-size:0.9rem;text-transform:uppercase;letter-spacing:1px;">Pending Testimonials</h4>
-                <div id="pending-list"><p style="color:var(--text-muted);font-size:0.85rem;">No pending testimonials.</p></div>
+            <div id="admin-notif-panel"
+                style="display:none;position:fixed;top:70px;right:20px;background:#1a1a2e;border:1px solid var(--primary-color);border-radius:12px;padding:1rem;min-width:300px;max-width:400px;max-height:400px;overflow-y:auto;z-index:9999;box-shadow:0 8px 32px rgba(0,0,0,0.5);">
+                <h4
+                    style="color:var(--primary-color);margin:0 0 0.75rem 0;font-size:0.9rem;text-transform:uppercase;letter-spacing:1px;">
+                    Pending Testimonials</h4>
+                <div id="pending-list">
+                    <p style="color:var(--text-muted);font-size:0.85rem;">No pending testimonials.</p>
+                </div>
             </div>
         </nav>
     </header>
@@ -144,10 +187,15 @@
                         </div>
                         <div class="project-info">
                             <h3>Project Two (Bella Cucina)</h3>
-                            <p>"Bella Cucina is an elegant, fully responsive Italian restaurant website. It features a modern design with a dynamic menu, vibrant image gallery, and a built-in table reservation system, showcasing front-end development skills and an eye for user experience."</p>
+                            <p>"Bella Cucina is an elegant, fully responsive Italian restaurant website. It features a
+                                modern design with a dynamic menu, vibrant image gallery, and a built-in table
+                                reservation system, showcasing front-end development skills and an eye for user
+                                experience."</p>
                             <div class="project-links">
-                                <a href="https://restaurant-website-kappa-jade.vercel.app/" target="_blank" class="btn secondary-btn">Demo <i class="fas fa-external-link-alt"></i></a>
-                                <a href="https://github.com/zannyphantom-13/resturant-website" target="_blank" class="btn secondary-btn">Code <i class="fab fa-github"></i></a>
+                                <a href="https://restaurant-website-kappa-jade.vercel.app/" target="_blank"
+                                    class="btn secondary-btn">Demo <i class="fas fa-external-link-alt"></i></a>
+                                <a href="https://github.com/zannyphantom-13/Resturant-website" target="_blank"
+                                    class="btn secondary-btn">Code <i class="fab fa-github"></i></a>
                             </div>
                         </div>
                     </article>
@@ -255,7 +303,7 @@
                 g.gain.setValueAtTime(0.4, ctx.currentTime);
                 g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
                 o.start(ctx.currentTime); o.stop(ctx.currentTime + 0.5);
-            } catch(e) {}
+            } catch (e) { }
         }
 
         document.addEventListener('DOMContentLoaded', async () => {
@@ -342,7 +390,7 @@
                     // First load with pending items - show they exist
                     console.log('[Notification] Initial load with', pendingData.length, 'pending testimonial(s)');
                 }
-                
+
                 lastPendingIds = newIds;
 
                 // Update badge count
@@ -534,7 +582,7 @@
                     renderTestimonials(data || []);
                 };
                 await fetchApproved();
-                
+
                 // Setup public channel for realtime updates on approvals
                 if (!publicChannel) {
                     console.log('[Public] Setting up public channel...');
@@ -560,7 +608,7 @@
                                 setTimeout(loadTestimonials, 2000);
                             }
                         });
-                    
+
                     // Fallback polling to ensure updates appear (poll every 10 seconds)
                     setInterval(fetchApproved, 10000);
                 }
@@ -582,7 +630,7 @@
                     }
                     card.innerHTML = `<p class="testimonial-text">"${data.text}"</p>
                         <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-top:1rem;">
-                            <img src="${data.author_photo||'media/profile.png'}" alt="${data.author_name}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;" onerror="this.src='media/profile.png'">
+                            <img src="${data.author_photo || 'media/profile.png'}" alt="${data.author_name}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;" onerror="this.src='media/profile.png'">
                             <h4 class="client-name" style="margin:0;">- ${data.author_name}</h4>
                         </div>${actionBtn}`;
                     testimonialsGrid.appendChild(card);

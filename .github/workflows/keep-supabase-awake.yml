@@ -1,0 +1,17 @@
+name: Keep Supabase Awake
+
+on:
+  schedule:
+    # Runs at 00:00 every 3rd day to ensure it stays well within the 7-day pause window
+    - cron: '0 0 */3 * *'
+  workflow_dispatch: # Allows manual triggering from the Actions tab
+
+jobs:
+  ping-supabase:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase API
+        run: |
+          curl -s -H "apikey: sb_publishable_HbAK8y8thY7aACqd0p0ojQ_D4t6PKJb" \
+               -H "Authorization: Bearer sb_publishable_HbAK8y8thY7aACqd0p0ojQ_D4t6PKJb" \
+               "https://ptpugwltlbqawumsiyrc.supabase.co/rest/v1/testimonials?select=id&limit=1"
